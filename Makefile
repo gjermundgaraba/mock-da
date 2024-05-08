@@ -1,8 +1,17 @@
-LDFLAGS=-ldflags="-X '$(versioningPath).buildTime=$(shell date)' -X '$(versioningPath).lastCommit=$(shell git rev-parse HEAD)' -X '$(versioningPath).semanticVersion=$(shell git describe --tags --dirty=-dev 2>/dev/null || git rev-parse --abbrev-ref HEAD)'"
 DOCKER := $(shell which docker)
 DOCKER_BUF := $(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace bufbuild/buf
 
-# Define pkgs, run, and cover vairables for test so that we can override them in
+ldflags = -X '$(versioningPath).buildTime=$(shell date)' \
+		  -X '$(versioningPath).lastCommit=$(shell git rev-parse HEAD)' \
+		  -X '$(versioningPath).semanticVersion=$(shell git describe --tags --dirty=-dev 2>/dev/null || git rev-parse --abbrev-ref HEAD)'
+
+ifeq ($(LINK_STATICALLY),true)
+	ldflags += -linkmode=external -extldflags '-Wl,-z,muldefs -static'
+endif
+
+BUILD_FLAGS := -ldflags="$(ldflags)"
+
+# Define pkgs, run, and cover vairabqles for test so that we can override them in
 # the terminal more easily.
 pkgs := $(shell go list ./...)
 run := .
@@ -11,7 +20,7 @@ count := 1
 ## build: Build mock-da binary.
 build:
 	@echo "--> Building mock-da"
-	@go build -o build/ ${LDFLAGS} ./...
+	@go build -o build/ ${BUILD_FLAGS} ./...
 .PHONY: build
 
 ## help: Show this help message
